@@ -60,19 +60,21 @@ int main(int argc,char**argv){try{check(argc==2,"userdir needed");check(dlopen("
  int baseline=report_count();
  for(const auto& period: {"七日统计","三十日统计","近365日统计","累计统计","今日统计"}){check(key(0xff53).empty(),"statistics period committed");check(top().find(period)!=std::string::npos,"statistics period wrong");}
  check(key(0xff51).empty()&&top().find("累计统计")!=std::string::npos,"previous statistics period");
- for(const auto& navigation: {std::pair<int,int>{'l',0},{'h',0},{'f',4},{'b',4}}){
-  const bool forward=navigation.first=='l'||navigation.first=='f';
+ for(const auto& navigation: {std::pair<int,int>{'l',0},{'h',0},{'j',0},{'k',0}}){
+  const bool forward=navigation.first=='l'||navigation.first=='j';
   const char* periods[]={"今日统计","七日统计","三十日统计","近365日统计","累计统计"};
   for(int step=1;step<=5;++step){
    check(key(navigation.first,navigation.second).empty(),"statistics navigation committed text");
    const int index=forward?(4+step)%5:(4-step+5)%5;
-   check(top().find(periods[index])!=std::string::npos,"statistics h/l or Ctrl+b/f cycle wrong");
+   check(top().find(periods[index])!=std::string::npos,"statistics h/j/k/l cycle wrong");
    check(a->get_option(s,"tiger_stats_view"),"statistics navigation closed view");
   }
  }
  check(key(' ').empty(),"statistics space inserted dashboard");check(std::string(a->get_input(s)).empty()&&!a->get_option(s,"dumb"),"statistics failed to close");
  open_stats_menu();check(key(0xff1b).empty(),"statistics Escape committed");check(std::string(a->get_input(s)).empty(),"statistics Escape left marker");
- check(type("hl").empty()&&std::string(a->get_input(s))=="hl","h/l captured outside statistics");clear();
+ for(char letter: std::string("hljk")){check(key(letter).empty()&&std::string(a->get_input(s))==std::string(1,letter),"h/j/k/l captured outside statistics");clear();}
+ for(char letter: std::string("bf")){open_stats_menu();check(key(letter,4).empty()&&!a->get_option(s,"tiger_stats_view")&&!a->get_option(s,"dumb")&&std::string(a->get_input(s)).empty(),"removed Ctrl+b/f still switches statistics or leaks state");}
+
  open_stats_menu();check(a->select_candidate(s,0),"statistics mouse selection failed");check(drain().empty()&&!a->get_option(s,"dumb")&&std::string(a->get_input(s)).empty(),"statistics click inserted dashboard or leaked state");
  open_stats_menu();check(key('u').empty()&&std::string(a->get_input(s))=="u"&&!a->get_option(s,"dumb"),"typing after statistics failed");clear();
  type("jxbh");open_stats_menu(false);check(std::string(a->get_input(s))=="jxbh"&&top()=="你好"&&!a->get_option(s,"tiger_stats_view"),"statistics altered unfinished text");clear();

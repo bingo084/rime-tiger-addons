@@ -19,7 +19,7 @@
     },
     {
       "path": "lua/zqj_stats.lua",
-      "sha256": "8cd3991cadd5713c3518e565f1743826b4e0bbbb0b7b07a71b68179448daa87b"
+      "sha256": "36e70d26fa1625e37346bb24f85280416181fcf1c887a7d995548832f39b0f4e"
     },
     {
       "path": "lua/tiger_yin_guard.lua",

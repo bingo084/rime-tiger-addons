@@ -1019,17 +1019,10 @@ local function processor(key, env)
     if period then
         local kc = key.keycode
         local direction
-        if not (key:alt() or key:super()) then
-            if key:ctrl() then
-                if not key:shift() then
-                    if kc == 0x66 then direction = 1 end  -- Ctrl+f
-                    if kc == 0x62 then direction = -1 end -- Ctrl+b
-                end
-            else
-                if kc == 0xff53 or kc == 0xff54 or kc == 0xff09 or kc == 0x6c then direction = 1 end
-                if kc == 0xff51 or kc == 0xff52 or (kc == 0xff09 and key:shift()) or kc == 0x68 then direction = -1 end
-                if kc == 0xff1b or kc == 0x20 or kc == 0xff0d then close_view(ctx); return 1 end
-            end
+        if not (key:ctrl() or key:alt() or key:super()) then
+            if kc == 0xff53 or kc == 0xff54 or kc == 0xff09 or kc == 0x6c or kc == 0x6a then direction = 1 end
+            if kc == 0xff51 or kc == 0xff52 or (kc == 0xff09 and key:shift()) or kc == 0x68 or kc == 0x6b then direction = -1 end
+            if kc == 0xff1b or kc == 0x20 or kc == 0xff0d then close_view(ctx); return 1 end
         end
         if direction then
             ctx:set_property("zqj_stats_view", tostring((period - 1 + direction) % #PERIODS + 1))
@@ -1048,7 +1041,7 @@ local function translator(input, seg, env)
     if input ~= VIEW_INPUT or not period then return end
     local entry = PERIODS[period]
     local candidate = Candidate("stat", seg.start, seg._end,
-        format_summary(entry[1], aggregate_stats(entry[2])), "h/l、Ctrl+b/f、←/→ 切换周期 · Esc/空格关闭")
+        format_summary(entry[1], aggregate_stats(entry[2])), "h/k 上一周期 · j/l 下一周期 · Esc/空格关闭")
     candidate.preedit = "统计"
     yield(candidate)
 end
