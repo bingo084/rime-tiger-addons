@@ -31,6 +31,23 @@ systemctl --user restart app-org.fcitx.Fcitx5@autostart.service
 已有 custom 时，合并模板的 patch 条目，保留原有设置。
 模板不包含个人快捷键；个人绑定继续使用 key_binder/bindings/+。
 
+## 修改后安装
+
+修改 assets/ 下的源码或数据后，在仓库目录运行：
+
+```sh
+python scripts/refresh_manifest.py
+python scripts/verify.py --base-rime-dir ~/.local/share/fcitx5/rime
+python scripts/install.py --rime-dir ~/.local/share/fcitx5/rime
+rime_deployer --build ~/.local/share/fcitx5/rime /usr/share/rime-data ~/.local/share/fcitx5/rime/build
+systemctl --user restart app-org.fcitx.Fcitx5@autostart.service
+```
+
+refresh_manifest.py 只更新已登记资源的哈希；新增辅助文件时，先在 manifest.json
+的 assets 列表加入路径和 sha256 字段，再运行它。修改源码与清单一起提交。
+config/ 下的 custom 是辅助模板，安装脚本不会覆盖正在使用的 custom；
+涉及配置条目调整时，同步修改 chezmoi 管理的个人 custom 并应用。
+
 ## 验证
 
 验证需要 Python/PyYAML、g++、librime 开发头文件、librime-lua 和 rime_deployer。
@@ -51,7 +68,7 @@ python tests/install_smoke.py
 
 BASELINE.json 记录当前基线和源包校验值。先单独升级官方方案，再运行验证。
 验证其他版本时显式加 --allow-new-base；通过后更新基线和兼容记录。
-辅助文件发生变化时，需要同步更新 manifest.json 中的 SHA-256。
+辅助文件发生变化时，运行 scripts/refresh_manifest.py 更新 manifest.json 中的 SHA-256。
 
 [功能用法与快符限制](docs/usage.md) · [资源来源和本地修改](SOURCES.md)
 
