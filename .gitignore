@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+/build/
+/models/
+/backups/
+/verification/
+*.userdb/
+*.userdb
+*.log
+.DS_Store

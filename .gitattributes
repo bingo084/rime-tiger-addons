@@ -1,0 +1,4 @@
+# Preserve imported resources byte-for-byte, including their original CRLF.
+assets/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+# Retain the trailing separators in the imported emoji table.
+assets/opencc/emoji.txt whitespace=-blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol

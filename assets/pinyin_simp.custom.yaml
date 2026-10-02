@@ -1,0 +1,58 @@
+# encoding: utf-8
+# pinyin_simp.custom.yaml
+#
+# 作用：把 pinyin_simp 词典的**全拼编码**改写成**小鹤双拼编码**，
+#       从而使 tiger_sentence 的拼音反查（` 引导）按小鹤双拼输入。
+#
+# 原理：tiger_sentence 的反查走
+#         script_translator@yin_add_user { dictionary: pinyin_simp, prefix: "`" }
+#       它查的是 pinyin_simp 这本词典，而词典的检索码存在
+#         build/pinyin_simp.prism.bin
+#       里。prism 是**依据本方案的 speller/algebra 编译**出来的
+#       （见 librime dictionary.cc：未显式配置 prism 时，prism 名取词库名）。
+#       所以在此改写 algebra，重新布署后 prism 里存的就是双拼码，反查自然认双拼。
+#
+# 还原：**删除本文件并重新布署**，pinyin_simp 回到自带的全拼 algebra，反查即还原为全拼。
+#       本文件只影响 pinyin_simp 这一本词典的编码，不改动 tiger_sentence 的任何配置。
+#
+# 参考：D:\RimeUser2\01 双拼反查配置（自然码 小鹤 微软）\小鹤双拼\PY_c.custom.yaml
+#       该文件即用同一手法让 PY_c 方案支持小鹤双拼反查。
+
+patch:
+  # 整列替换：pinyin_simp 自带的是全拼 algebra（含 abbrev 简拼与各 derive 容错），
+  # 若不替换而只追加，两套规则会同时产出编码、互相污染，故必须整列替换。
+  speller/algebra:
+    - erase/^xx$/
+    # 零声母与 ü 的规范化（与全拼一致，保留）
+    - derive/^([jqxy])u$/$1v/
+    - derive/^([aoe])([ioun])$/$1$1$2/
+    - xform/^([aoe])(ng)?$/$1$1$2/
+    # ---- 以下为全拼韵母 → 小鹤双拼键的改写 ----
+    - xform/iu$/Q/
+    - xform/(.)ei$/$1W/
+    - xform/uan$/R/
+    - xform/[uv]e$/T/
+    - xform/un$/Y/
+    - xform/^sh/U/
+    - xform/^ch/I/
+    - xform/^zh/V/
+    - xform/uo$/O/
+    - xform/ie$/P/
+    - xform/i?ong$/S/
+    - xform/ing$|uai$/K/
+    - xform/(.)ai$/$1D/
+    - xform/(.)en$/$1F/
+    - xform/(.)eng$/$1G/
+    - xform/[iu]ang$/L/
+    - xform/(.)ang$/$1H/
+    - xform/ian$/M/
+    - xform/(.)an$/$1J/
+    - xform/(.)ou$/$1Z/
+    - xform/[iu]a$/X/
+    - xform/iao$/N/
+    - xform/(.)ao$/$1C/
+    - xform/ui$/V/
+    - xform/in$/B/
+    # 上面用大写字母做中间标记（避免后续规则误伤已改写的部分），
+    # 最后统一降为小写 —— pinyin_simp 的 speller/alphabet 只收小写。
+    - xlit/QWRTYUIOPSDFGHJKLZXCVBNM/qwrtyuiopsdfghjklzxcvbnm/

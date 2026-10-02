@@ -1,0 +1,81 @@
+{
+  "format": 1,
+  "assets": [
+    {
+      "path": "pinyin_simp.dict.yaml",
+      "sha256": "dfde40bfc7ec510c4c9b05af97d2fbb7f1febed2663f325e3f5b80060a0984f1"
+    },
+    {
+      "path": "pinyin_simp.schema.yaml",
+      "sha256": "9bbbc965d16458bcd309790baee9e9c1c8e8fc708ee7dc555ed95253dbaa909f"
+    },
+    {
+      "path": "tiger_sentence_symbols.yaml",
+      "sha256": "18f8080b3c3459e77816896e0a533a12388219a59377f02a795588d61eb6c9eb"
+    },
+    {
+      "path": "lua/zqj_userdb.lua",
+      "sha256": "81e3cc8d4030301da6a37febf023cf11c334412251d9311c4ea933f12e973160"
+    },
+    {
+      "path": "lua/zqj_stats_proc.lua",
+      "sha256": "4523b9db7d2cbac07f9ec5c537fdfce14630eeb6ce29e5d36e1b38ff797d9e07"
+    },
+    {
+      "path": "lua/zqj_stats.lua",
+      "sha256": "afed0cd5651b945586627d8dd7c51ec064f5e295336a54a8140fad25b9a3b0d5"
+    },
+    {
+      "path": "lua/tiger_yin_guard.lua",
+      "sha256": "8d64206fed9df93d9dd92a9925d463a57d9314b2b36903f6aab9d334fbf66134"
+    },
+    {
+      "path": "lua/tiger_yin_comment.lua",
+      "sha256": "e8cbe18045ea9990fb647ea8ab8f90da501579d50e86422eb7865149aac4a1de"
+    },
+    {
+      "path": "lua/tiger_punct_alt.lua",
+      "sha256": "82e22d7ac2e41e9c502049329ab9c3f7c823db8e39aeb04802c9063f13505d3e"
+    },
+    {
+      "path": "lua/tiger_kf_processor.lua",
+      "sha256": "af77ddc1986b2f55887e842f5fa0796eb8e947f7066573b3b50959ad687ae56b"
+    },
+    {
+      "path": "lua/tiger_kf.lua",
+      "sha256": "1c0f3140ce59eaa033562b67bd74e1087a14549dbb88f2b29d956235793f7ab6"
+    },
+    {
+      "path": "pinyin_simp.custom.yaml",
+      "sha256": "d9786787f797fa8f1da7b9ffed55268edcd9cef579cc66b9137622bc698fc1e9"
+    },
+    {
+      "path": "tiger_lookup.dict.yaml",
+      "sha256": "98e3908b4aaf09fb7c906031fad5da1663121e138d7f5479cbe4d5f0735d46bf"
+    },
+    {
+      "path": "tiger_lookup.schema.yaml",
+      "sha256": "4d8f72c90d7de9e8d4501553c689be3316e789077bff468d3d4aa4cfcb2f9d7a"
+    },
+    {
+      "path": "opencc/emoji.json",
+      "sha256": "771a0a9b94496e475aec419d25be9169b2fd1d42581a7f504321c909f23c5388"
+    },
+    {
+      "path": "opencc/emoji.txt",
+      "sha256": "d0c27b74d5190b7b89f43add3c0bb49e9adb773e49939308e15b7a13cef21583"
+    },
+    {
+      "path": "lua/tiger_chaifen.lua",
+      "sha256": "c1d5a55dd6ac8004002823a6d1a3e9d304e62e90d29e907aad7879b32f4fb662"
+    },
+    {
+      "path": "lua/tiger_emoji.lua",
+      "sha256": "073b414138ac0bb692d28ab305a6002f6199862b7103bce5234c9d41dc318994"
+    },
+    {
+      "path": "lua/tiger_emoji_processor.lua",
+      "sha256": "72af1240b3b47a1fd7ef3793f068c13427e598a99468372c68fec07740c12778"
+    }
+  ]
+}
