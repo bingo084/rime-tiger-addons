@@ -253,18 +253,6 @@ local function migrate_data()
     peak_history = {}
 end
 
-local function clear_all_data()
-    if not ensure_db_open() then return false end
-    if db_empty then db_empty(db); peak_history = {}; return true end
-    local keys = {}
-    if each_key(function(k) keys[#keys + 1] = k end) then
-        for _, key in ipairs(keys) do db_erase(db, key) end
-        peak_history = {}
-        return true
-    end
-    return false
-end
-
 -- ============================ 运行状态 ============================
 -- process 与 translator 共享同一模块（模块级 upvalue），这是 librime-lua 的标准做法。
 --
@@ -638,20 +626,6 @@ local function is_stat_record(r)
     return type(text) == "string" and text:find("效率仪表盘", 1, true) ~= nil
 end
 
--- 指令残留串：commit_history 里会残留**以半角 "/" 开头的输入缓冲内容**，例如
---     type=raw  text=[/tjvsekcueqlcyidlnvfibmlkklnchygtuecgzxp]
--- 成因：本脚本的 translator 只认 input 恰为 "/t"、"/tj"、"/rtj" … 这些**精确值**；
--- 用户打 /tj 看了一眼，没按空格上屏就接着打正文，输入区内容就变成 "/tjvsek…"，
--- 既不是指令、也不是用户要上屏的文字，但 librime 仍把它作为一段 raw 文本 push 进历史。
--- 实测危害（沙箱两遍 151 字正文）：不排除 → 字数 326（应为 302，虚增 24），
--- 而键数与时长都不变，于是均速虚高、码长偏低（用户实机：均速 113.88、码长 1.62）。
--- 判据：整段文本以 "/" 开头即视为残留。正常中文正文与标点不会以半角斜杠开头
--- （虎码的标点走 punct 类型、内容是全角标点）。
-local function is_cmd_residue(text)
-    if type(text) ~= "string" then return false end
-    return text:sub(1, 1) == "/"
-end
-
 -- 【字数 + 峰速】按 commit_history 的每条记录累计（含提前上屏的 raw 片段）。
 -- 每个字符只计一次；峰速用"每条落字记录 + 相邻间隔"，与已验证的均速/峰速口径一致。
 local function on_char_record(hz)
@@ -792,16 +766,7 @@ capture = function(ctx)
     for _, r in ipairs(added) do
         -- "thru" = 原样透传的按键；"stat" = 本脚本的统计指令输出。两者都不是用户文本。
         if r.type ~= "thru" and not is_stat_record(r) then
-            -- 【v11 关键修正·指令残留串被当正文】
-            -- commit_history 里会出现**以 "/" 开头的输入缓冲串**，例如
-            --     type=raw  text=[/tjvsekcueqlcyidlnvfibmlkklnchygtuecgzxp]
-            -- 这是 /tj 之类指令的输入区内容（本脚本的 translator 只认 input 恰为 "/tj"
-            -- 等精确值，一旦后面接着打了正文，input 变成 "/tjvsek…"，既不是指令、
-            -- 也不是用户想上屏的文字，却被 librime 当作一段 raw 文本 push 进历史）。
-            -- 实测（沙箱，两遍 151 字正文）：不排除它 → 字数 326（应为 302，虚增 24），
-            -- 且因键数与时长不变，均速与码长被算歪（用户实机：均速 113.88、码长 1.62）。
-            -- 判据：整段文本以 "/" 开头即丢弃。正常中文/标点正文不会以半角斜杠开头。
-            if not is_cmd_residue(r.text) then
+            do
                 local hz = count_chars(r.text)
                 if hz > 0 then
                     local codes = S.pending_code - S.pend_at_landing
@@ -997,102 +962,88 @@ local function format_summary(title, data)
     )
 end
 
--- ============================ 组件 ============================
+-- ============================ 方案菜单统计视图 ============================
+-- 使用内部占位符承载候选，不占用任何实际标点键。
+-- 只在输入已结束时打开；避免改变正在输入的句子和 Tab 锁定状态。
+local VIEW_INPUT = "\31"
+local PERIODS = { {"今日", 1}, {"七日", 7}, {"三十日", 30}, {"近365日", 365}, {"累计", 0} }
+
+local function close_view(ctx)
+    if ctx:get_property("zqj_stats_view") == "" then return end
+    local was_dumb = ctx:get_property("zqj_stats_was_dumb") == "1"
+    ctx:set_property("zqj_stats_view", "")
+    ctx:set_property("zqj_stats_was_dumb", "")
+    ctx:set_option("tiger_stats_view", false)
+    ctx:set_option("dumb", was_dumb)
+    if ctx.input == VIEW_INPUT then ctx:clear() end
+end
+
 local function init(env)
     ensure_db_open()
     migrate_data()
-    read_thresholds(env)      -- 允许 schema 覆盖会话阈值
+    read_thresholds(env)
     local ctx = env.engine.context
-    -- 【关键】这里**不能**清差量基准。
-    -- init 是**每组件各调一次**的：processor（zqj_stats_proc）与 translator
-    -- （lua_translator@*zqj_stats）都会走到这里，且两者共用**同一个引擎**（同一 eid）。
-    -- 若在此 wipe 基准，第二次 init 会把第一次 init 刚建立的基准抹掉，于是紧接着的
-    -- 那次 capture 只做"记录首帧"、不计入 → 丢掉自那以来累积的全部落字
-    --（实测两窗口两遍少 15 字 / 少 11 次落字，正是"丢一张历史(~20条)"的量级）。
-    -- 正确做法：**新引擎自然就是新基准**——新引擎没有 zqj_eid 属性 → 分到新桶 →
-    -- primed=false → 首帧只记录快照、不计数。所以无需在此显式清空。
-    if env._zqj_commit then env._zqj_commit:disconnect() end
-    if env._zqj_update then env._zqj_update:disconnect() end
-    -- 差量基准按**引擎**分桶（键为 context 属性 zqj_eid），
-    -- 因此 processor 与 translator 两个组件共享同一份基准，不会各算一遍。
-    env._zqj_update = ctx.update_notifier:connect(function(c) capture(c) end)
+    env._zqj_update = ctx.update_notifier:connect(function(c)
+        capture(c)
+        -- 鼠标选择/API 确认也不能把仪表盘插入应用。
+        if c.input == "" then close_view(c) end
+    end)
     env._zqj_commit = ctx.commit_notifier:connect(function(c) capture(c) end)
-    -- 首帧立即取一次：把本引擎"已存在的历史"记为基准，绝不重复计入。
+    env._zqj_option = ctx.option_update_notifier:connect(function(c, name)
+        if name ~= "tiger_stats_view" then return end
+        if not c:get_option(name) then close_view(c); return end
+        if c:get_property("zqj_stats_view") ~= "" then return end
+        if c.input ~= "" then c:set_option(name, false); return end
+        capture(c)
+        flush_hold()
+        c:set_property("zqj_stats_was_dumb", c:get_option("dumb") and "1" or "0")
+        c:set_property("zqj_stats_view", "1")
+        c:set_option("dumb", true)
+        c:push_input(VIEW_INPUT)
+    end)
     pcall(function() capture(ctx) end)
 end
 
 local function fini(env)
-    -- 引擎关闭前结算挂起的落字，避免最后一个字丢失（引擎一天会重建数十次）。
     pcall(flush_hold)
-    if env._zqj_commit then env._zqj_commit:disconnect(); env._zqj_commit = nil end
-    if env._zqj_update then env._zqj_update:disconnect(); env._zqj_update = nil end
+    for _, name in ipairs({"_zqj_commit", "_zqj_update", "_zqj_option"}) do
+        if env[name] then env[name]:disconnect(); env[name] = nil end
+    end
     if db and db_loaded(db) then db:close() end
 end
 
--- 恒放行的击键计数处理器（须排在链首）。
---
--- 【v3 关键修正·指令后按键被误杀】旧版判据是 `input:sub(1,1) == "/"` → 跳过该键。
--- 这个判据**太宽**：`/tj` 之后输入区并不会立刻清空，接下来打的编码会让 input 变成
--- `/tjv`、`/tjvse`… 仍然以 "/" 开头，于是 **`/tj` 之后那一整段正常编码全被跳过**。
--- 实测 6×133 字输入：a–z 键真值 1758，旧版只记 1561，**少 197 个**，正是被这条判据吃掉的。
--- 这直接导致实机平均码长被压到 0.89 码/字（虎码应约 2.4–2.5）。
---
--- 正确判据：只排除**统计指令本身**的按键，即 input 恰好是 `/` 或 `/t /tj /rtj /ztj /ytj /ntj /tjql`
--- 这些前缀（含只有 "/" 一个字符的起始态）。一旦 input 超出指令集合，后续都是用户正文，照常计数。
-local STAT_CMDS = {
-    ["/"] = true,
-    ["/t"] = true, ["/tj"] = true, ["/tjq"] = true, ["/tjql"] = true,
-    ["/r"] = true, ["/rt"] = true, ["/rtj"] = true,
-    ["/z"] = true, ["/zt"] = true, ["/ztj"] = true,
-    ["/y"] = true, ["/yt"] = true, ["/ytj"] = true,
-    ["/n"] = true, ["/nt"] = true, ["/ntj"] = true,
-}
-local function is_stat_cmd_input(inp)
-    return STAT_CMDS[inp] == true
-end
-
-local K_NOOP = 2
-local function processor(key_event, env)
-    if key_event:release() then return K_NOOP end
-    local kc = key_event.keycode
-    if type(kc) == "number" then
-        local inp = env.engine.context.input or ""
-        -- 只排除**统计指令自身**的按键（见上方说明）。
-        -- 方向键/翻页/Tab/Esc 等无关按键的剔除统一放在 on_keystroke 里做（is_input_key），
-        -- 避免两处各判一遍、日后改一处忘一处。
-        if not (is_stat_cmd_input(inp) or (inp == "" and kc == 0x2F)) then
-            -- 传入 context：on_keystroke 会顺手采样一次 commit_history（见其内注释）。
-            pcall(on_keystroke, kc, env.engine.context)
+local function processor(key, env)
+    if key:release() then return 2 end
+    local ctx = env.engine.context
+    local period = tonumber(ctx:get_property("zqj_stats_view"))
+    if period then
+        local kc = key.keycode
+        if not (key:ctrl() or key:alt() or key:super()) then
+            local direction
+            if kc == 0xff53 or kc == 0xff54 or kc == 0xff09 then direction = 1 end
+            if kc == 0xff51 or kc == 0xff52 or (kc == 0xff09 and key:shift()) then direction = -1 end
+            if direction then
+                ctx:set_property("zqj_stats_view", tostring((period - 1 + direction) % #PERIODS + 1))
+                ctx:refresh_non_confirmed_composition()
+                return 1
+            end
+            if kc == 0xff1b or kc == 0x20 or kc == 0xff0d then close_view(ctx); return 1 end
         end
+        close_view(ctx)
     end
-    return K_NOOP
+    -- 普通输入按原口径计数，标点不再充当查询指令。
+    if type(key.keycode) == "number" then pcall(on_keystroke, key.keycode, ctx) end
+    return 2
 end
 
 local function translator(input, seg, env)
-    if input:sub(1, 1) ~= "/" then return end
-    -- 【重要】查询前必须先结算挂起的落字（hold）。
-    -- hold 是"等标点来标顶"的暂存：若用户打完一段没等到标点就查询/停手，
-    -- 这个字还挂在 hold 里没入库，查询就会少统计。故查询前先 flush。
-    flush_hold()
-    if input == "/tjql" then
-        if clear_all_data() then
-            S.pending_code, S.pend_at_landing = 0, 0
-            yield(Candidate("stat", seg.start, seg._end, "※ 统计数据已全部清空。", "🗑️"))
-        else
-            yield(Candidate("stat", seg.start, seg._end, "※ 数据清空失败，请检查权限。", "❌"))
-        end
-        return
-    end
-    local title, days
-    if input == "/rtj" then title, days = "今日", 1
-    elseif input == "/ztj" then title, days = "七日", 7
-    elseif input == "/ytj" then title, days = "卅日", 30
-    elseif input == "/ntj" then title, days = "本年", 365
-    elseif input == "/tj" then title, days = "生涯", 0 end
-    if title then
-        yield(Candidate("stat", seg.start, seg._end,
-            format_summary(title, aggregate_stats(days)), "📊"))
-    end
+    local period = tonumber(env.engine.context:get_property("zqj_stats_view"))
+    if input ~= VIEW_INPUT or not period then return end
+    local entry = PERIODS[period]
+    local candidate = Candidate("stat", seg.start, seg._end,
+        format_summary(entry[1], aggregate_stats(entry[2])), "←/→ 切换周期 · Esc/空格关闭")
+    candidate.preedit = "统计"
+    yield(candidate)
 end
 
 return { init = init, func = translator, fini = fini, processor = processor }

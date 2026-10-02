@@ -32,6 +32,7 @@ local function is_reverse_lookup(segment, env)
 end
 
 local function translator(input, seg, env)
+    if env.engine.context:get_property("zqj_stats_view") ~= "" then return end
     if is_reverse_lookup(seg, env) then return end
     -- 整句翻译器是协程函数（内部 yield），在同一协程里调用即可，
     -- yield 会正常向上传播给 librime-lua 的 LuaTranslation。

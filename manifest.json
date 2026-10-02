@@ -10,10 +10,6 @@
       "sha256": "9bbbc965d16458bcd309790baee9e9c1c8e8fc708ee7dc555ed95253dbaa909f"
     },
     {
-      "path": "tiger_sentence_symbols.yaml",
-      "sha256": "18f8080b3c3459e77816896e0a533a12388219a59377f02a795588d61eb6c9eb"
-    },
-    {
       "path": "lua/zqj_userdb.lua",
       "sha256": "81e3cc8d4030301da6a37febf023cf11c334412251d9311c4ea933f12e973160"
     },
@@ -23,19 +19,15 @@
     },
     {
       "path": "lua/zqj_stats.lua",
-      "sha256": "afed0cd5651b945586627d8dd7c51ec064f5e295336a54a8140fad25b9a3b0d5"
+      "sha256": "460d01d94d4b87ffa163da08be766faec5f90bd4777103dafcf24ea013d02cf8"
     },
     {
       "path": "lua/tiger_yin_guard.lua",
-      "sha256": "8d64206fed9df93d9dd92a9925d463a57d9314b2b36903f6aab9d334fbf66134"
+      "sha256": "8428820d9b7d8b5f0cf0ed1132be1b6f830aacf28346f96e9dc916d192cfed6b"
     },
     {
       "path": "lua/tiger_yin_comment.lua",
       "sha256": "e8cbe18045ea9990fb647ea8ab8f90da501579d50e86422eb7865149aac4a1de"
-    },
-    {
-      "path": "lua/tiger_punct_alt.lua",
-      "sha256": "82e22d7ac2e41e9c502049329ab9c3f7c823db8e39aeb04802c9063f13505d3e"
     },
     {
       "path": "pinyin_simp.custom.yaml",
@@ -72,6 +64,8 @@
   ],
   "retired": [
     "lua/tiger_kf_processor.lua",
-    "lua/tiger_kf.lua"
+    "lua/tiger_kf.lua",
+    "lua/tiger_punct_alt.lua",
+    "tiger_sentence_symbols.yaml"
   ]
 }

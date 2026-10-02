@@ -45,8 +45,11 @@ def main():
             p.write_text(text)
         old = target / "lua/tiger_emoji.lua"
         old.write_text("older helper")
-        retired = target / "lua/tiger_kf.lua"
-        retired.write_text("retired quick symbols")
+        retired_paths = json.loads((ROOT / "manifest.json").read_text())["retired"]
+        for name in retired_paths:
+            retired = target / name
+            retired.parent.mkdir(parents=True, exist_ok=True)
+            retired.write_text("retired " + name)
         before = snapshot(target)
         invoke(ROOT, target, "--dry-run")
         assert snapshot(target) == before, "Dry run wrote files"
@@ -55,9 +58,10 @@ def main():
             assert (target / name).read_text() == text, f"Personal/base file changed: {name}"
         backups = list((target / "backups").glob("tiger-addons-*/lua/tiger_emoji.lua"))
         assert len(backups) == 1 and backups[0].read_text() == "older helper", "Rollback copy missing"
-        assert not retired.exists(), "Retired helper was not removed"
-        retired_backups = list((target / "backups").glob("tiger-addons-*/lua/tiger_kf.lua"))
-        assert len(retired_backups) == 1 and retired_backups[0].read_text() == "retired quick symbols", "Retired backup missing"
+        for name in retired_paths:
+            assert not (target / name).exists(), f"Retired helper was not removed: {name}"
+            retired_backups = list((target / "backups").glob("tiger-addons-*/" + name))
+            assert len(retired_backups) == 1 and retired_backups[0].read_text() == "retired " + name, f"Retired backup missing: {name}"
         invoke(ROOT, target, "--check")
         installed = snapshot(target)
         invoke(ROOT, target)

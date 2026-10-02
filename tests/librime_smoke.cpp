@@ -12,6 +12,22 @@ void clear(){a->clear_composition(s);drain();}
 void option(const char*name,bool b){clear();a->set_option(s,name,b);}
 std::string top(std::string*comment=nullptr){RIME_STRUCT(RimeContext,c);check(a->get_context(s,&c),"no context");check(c.menu.num_candidates>0,"empty menu");std::string t=c.menu.candidates[0].text;if(comment)*comment=c.menu.candidates[0].comment?c.menu.candidates[0].comment:"";a->free_context(&c);return t;}
 int page(){RIME_STRUCT(RimeContext,c);a->get_context(s,&c);int p=c.menu.page_no;a->free_context(&c);return p;}
+void open_stats_menu(bool expect_open=true){
+ check(key(0xffc1).empty(),"F4 committed text");
+ for(int attempt=0;attempt<2;++attempt){
+  RimeCandidateListIterator it{};check(a->candidate_list_begin(s,&it),"switcher iterator failed");
+  int idx=-1;while(a->candidate_list_next(&it)){
+   std::string text=it.candidate.text;
+   std::cout<<"menu "<<it.index<<" ["<<text<<"]\n";
+   if(text.find("查看统计")!=std::string::npos || (attempt==0 && text.find("／")!=std::string::npos))idx=it.index;
+  }a->candidate_list_end(&it);check(idx>=0,"statistics absent from scheme menu");
+  check(a->select_candidate(s,idx),"statistics menu selection failed");check(drain().empty(),"menu action committed text");
+  if(a->get_option(s,"tiger_stats_view")){check(expect_open,"statistics opened during composition");return;}
+  if(!expect_open && attempt==1)return;
+ }
+ throw std::runtime_error("statistics did not open from F4 menu");
+}
+int report_count(){std::string report=top();auto pos=report.find("字数:");check(pos!=std::string::npos,"statistics report absent");return std::stoi(report.substr(pos+7));}
 int main(int argc,char**argv){try{check(argc==2,"userdir needed");check(dlopen("/usr/lib/rime-plugins/librime-lua.so",RTLD_NOW|RTLD_GLOBAL),"plugin failed");a=rime_get_api();RIME_STRUCT(RimeTraits,t);t.user_data_dir=argv[1];t.shared_data_dir="/usr/share/rime-data";t.app_name="rime.tiger-features";t.distribution_code_name="fcitx5-rime";t.distribution_version="5.1.23";t.log_dir=argv[1];t.min_log_level=2;const char*mods[]={"default","lua",nullptr};t.modules=mods;a->setup(&t);a->initialize(&t);s=a->create_session();check(s&&a->select_schema(s,"tiger_sentence"),"schema failed");a->set_option(s,"ascii_mode",false);
  check(a->get_option(s,"tiger_sentence_correction_weak"),"weak preference lost");check(a->get_option(s,"tiger_sentence_early_commit"),"early commit preference lost");
  std::string c;check(type("`nihc").empty(),"lookup auto committed");check(top(&c)=="你好"&&c.find("jx bh")!=std::string::npos&&c.find("女子")!=std::string::npos,"automatic reverse split/comment wrong");check(key(' ')=="你好","lookup commit wrong");
@@ -22,7 +38,10 @@ int main(int argc,char**argv){try{check(argc==2,"userdir needed");check(dlopen("
  clear();check(type("jxbh ;")=="你好；","sentence plus semicolon failed");
  clear();check(type("jxbh\\")=="你好、","sentence plus dunhao failed");
  clear();check(type("jxbh;").empty()&&std::string(a->get_input(s))=="jxbh;","native semicolon rank suffix changed");
- clear();type("/sx");check(page()==0,"symbols initial page");key('n',4);check(page()==1,"Ctrl+n paging");key('p',4);check(page()==0,"Ctrl+p paging");
+ for(const auto& test: {std::pair<std::string,std::string>{"/","、"},{"//","、、"},{"<","《"},{">","》"},{"<<","《《"},{"=","="},{"$","￥"},{"$$","￥￥"},{"%","%"},{"|","|"},{"{","{"},{"}","}"},{"jxbh/","你好、"},{"jxbh<","你好《"},{"jxbh|","你好|"},{"jxbh=","你好="}}){
+  clear();check(type(test.first)==test.second,"native punctuation differs: "+test.first);check(std::string(a->get_input(s)).empty(),"punctuation left pending input: "+test.first);
+ }
+ option("full_shape",true);check(type("/")=="／","full shape slash changed");option("full_shape",false);
  option("tiger_sentence_correction_off",true);option("tiger_sentence_early_commit",false);type("lomn");key(0xff09);check(type("ueottu").empty(),"Tab unexpectedly committed");check(top()=="草码的是我","Tab lock lost");check(key(' ')=="草码的是我","Tab commit lost");
  option("tiger_sentence_correction_weak",true);option("tiger_sentence_early_commit",true);check(type("ptue").empty(),"correction empty-code commit regression");check(top(&c)=="是的"&&c=="🐞","correction candidate wrong");check(key(' ')=="是的","correction commit wrong");
  clear();type("jxbh");check(top(&c)=="你好"&&c.empty(),"normal typing gained split");
@@ -37,6 +56,21 @@ int main(int argc,char**argv){try{check(argc==2,"userdir needed");check(dlopen("
  clear();type("jxbh");key(0xff09);check(key(' ')=="👋","normal emoji Tab+space failed");
  clear();type("jxbh");key(0xff09);check(key('u')=="👋"&&std::string(a->get_input(s))=="u","normal emoji continued typing failed");
  clear();type("jxbh");key(0xff09);check(key('.')=="👋。","normal emoji punctuation failed");
- clear();type("/tjql");clear();std::string submitted=type("awmenamcuntaueottuawmenamcuntaueottu");submitted+=key(' ');check(submitted=="买椟还珠的是我买椟还珠的是我","normal early commit text changed");clear();type("/tj");std::string report=top();check(report.find("字数:14")!=std::string::npos,"statistics missed/duplicated early commits");std::cout<<report<<"\n";
+ clear();open_stats_menu();check(top().find("今日统计")!=std::string::npos,"initial period not today");
+ int baseline=report_count();
+ for(const auto& period: {"七日统计","三十日统计","近365日统计","累计统计","今日统计"}){check(key(0xff53).empty(),"statistics period committed");check(top().find(period)!=std::string::npos,"statistics period wrong");}
+ check(key(0xff51).empty()&&top().find("累计统计")!=std::string::npos,"previous statistics period");
+ check(key(' ').empty(),"statistics space inserted dashboard");check(std::string(a->get_input(s)).empty()&&!a->get_option(s,"dumb"),"statistics failed to close");
+ open_stats_menu();check(key(0xff1b).empty(),"statistics Escape committed");check(std::string(a->get_input(s)).empty(),"statistics Escape left marker");
+ open_stats_menu();check(a->select_candidate(s,0),"statistics mouse selection failed");check(drain().empty()&&!a->get_option(s,"dumb")&&std::string(a->get_input(s)).empty(),"statistics click inserted dashboard or leaked state");
+ open_stats_menu();check(key('u').empty()&&std::string(a->get_input(s))=="u"&&!a->get_option(s,"dumb"),"typing after statistics failed");clear();
+ type("jxbh");open_stats_menu(false);check(std::string(a->get_input(s))=="jxbh"&&top()=="你好"&&!a->get_option(s,"tiger_stats_view"),"statistics altered unfinished text");clear();
+ option("tiger_sentence_correction_off",true);option("tiger_sentence_early_commit",false);type("lomn");key(0xff09);open_stats_menu(false);check(type("ueottu").empty()&&top()=="草码的是我","statistics altered Tab lock");clear();
+ option("tiger_sentence_correction_weak",true);option("tiger_sentence_early_commit",true);
+ // Queries and cancelled buffers above must not add characters.
+ open_stats_menu();check(report_count()==baseline,"statistics query polluted count");check(key(0xff1b).empty(),"close statistics baseline");
+ std::string submitted=type("awmenamcuntaueottuawmenamcuntaueottu");submitted+=key(' ');check(submitted=="买椟还珠的是我买椟还珠的是我","normal early commit text changed");
+ open_stats_menu();check(report_count()==baseline+14,"statistics missed/duplicated early commits");std::cout<<top()<<"\n";check(key(0xff1b).empty(),"close report");
+ check(type("/")=="、","slash broken after statistics");
  clear();option("tiger_sentence_correction_weak",true);option("tiger_sentence_early_commit",true);a->destroy_session(s);a->finalize();std::cout<<"PASS "<<n<<" checks\n";
  }catch(const std::exception&e){std::cerr<<"FAIL "<<e.what()<<"\n";return 1;}}

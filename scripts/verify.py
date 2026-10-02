@@ -42,7 +42,7 @@ def main():
     user.mkdir(parents=True, exist_ok=True)
     print(f"Verification directory: {work}", flush=True)
     core_files = [name for name in expected if not name.startswith("models/")]
-    core_files += ["tiger_sentence.dict.yaml", "tiger_sentence_ascii.schema.yaml"]
+    core_files += ["tiger_sentence.dict.yaml", "tiger_sentence_ascii.schema.yaml", "symbols.yaml"]
     for name in core_files:
         source = base / name
         destination = user / name
@@ -65,6 +65,13 @@ def main():
     original = yaml.safe_load((base / "tiger_sentence.schema.yaml").read_text())
     if built["key_binder"]["bindings"] != original["key_binder"]["bindings"] + fixture["patch"]["key_binder/bindings/+"]:
         raise RuntimeError("Generated bindings differ from the official defaults plus the fixture")
+    if built["speller"] != original["speller"]:
+        raise RuntimeError("Official speller changed")
+    punctuation = dict(original["punctuator"])
+    symbols = yaml.safe_load((base / "symbols.yaml").read_text())
+    punctuation.update({key: symbols["punctuator"][key] for key in ("half_shape", "full_shape")})
+    if built["punctuator"] != punctuation:
+        raise RuntimeError("Official punctuation changed")
     binary = work / "librime_smoke"
     run_logged(["g++", "-std=c++17", str(ROOT / "tests/librime_smoke.cpp"), "-o", str(binary), "-lrime", "-ldl", "-Wl,-rpath,/usr/lib/rime-plugins"], work / "compile.log")
     run_logged([str(binary), str(user)], work / "smoke.log")

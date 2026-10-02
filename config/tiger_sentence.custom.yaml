@@ -6,7 +6,6 @@ patch:
   - lua_processor@tiger_sentence_ascii
   - lua_processor@*tiger_emoji_processor
   - recognizer
-  - lua_processor@*tiger_punct_alt
   - lua_processor@tiger_sentence_processor
   - key_binder
   - speller
@@ -38,9 +37,9 @@ patch:
   - lua_filter@*tiger_chaifen
   - lua_filter@*tiger_emoji
   - uniquifier
-  recognizer/patterns/punct: ^/([0-9]0?|[A-Za-z]+)$
-  speller/alphabet: zyxwvutsrqponmlkjihgfedcba;'0123456789~/
-  speller/initials: abcdefghijklmnopqrstuvwxyz~/
-  punctuator/import_preset: tiger_sentence_symbols
+  switches/+:
+  - name: tiger_stats_view
+    reset: 0
+    states: [查看统计, 查看统计]
   engine/translators/+:
   - lua_translator@*zqj_stats
