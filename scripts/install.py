@@ -56,6 +56,19 @@ def main():
         if not (target / name).is_file():
             parser.error(f"Install the official Tiger Sentence base first: missing {name}")
     entries = resources()
+    retired = json.loads((ROOT / "manifest.json").read_text()).get("retired", [])
+    active = {entry["path"] for entry in entries}
+    removals = []
+    for name in retired:
+        relative = Path(name)
+        if relative.is_absolute() or ".." in relative.parts or name in active:
+            raise ValueError(f"Invalid retired resource path: {name}")
+        destination = target / relative
+        if destination.is_dir():
+            parser.error(f"Retired resource is a directory: {name}")
+        if destination.exists() or destination.is_symlink():
+            removals.append(name)
+            print(f"REMOVE {name}")
     changed = []
     for entry in entries:
         destination = target / entry["path"]
@@ -64,9 +77,9 @@ def main():
             changed.append(entry)
         print(f"{'OK' if matches else 'COPY'} {entry['path']}")
     if args.check:
-        return 1 if changed else 0
-    if args.dry_run or not changed:
-        print(f"{len(changed)} resource(s) need installation; no files written.")
+        return 1 if changed or removals else 0
+    if args.dry_run or not (changed or removals):
+        print(f"{len(changed)} resource(s) need installation; {len(removals)} retired resource(s) need removal; no files written.")
         return 0
     backup = target / "backups" / ("tiger-addons-" + datetime.now().strftime("%Y%m%d-%H%M%S-%f"))
     for entry in changed:
@@ -75,9 +88,17 @@ def main():
             saved = backup / entry["path"]
             saved.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(destination, saved)
+    for name in removals:
+        saved = backup / name
+        saved.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(target / name, saved, follow_symlinks=False)
     for entry in changed:
         atomic_copy(ROOT / "assets" / entry["path"], target / entry["path"])
+    for name in removals:
+        (target / name).unlink()
     print(f"Installed {len(changed)} resource(s). Personal custom and user data were preserved.")
+    if removals:
+        print(f"Removed {len(removals)} retired resource(s), with rollback copies.")
     if backup.exists():
         print(f"Backup: {backup}")
     print("Restore custom through chezmoi, or merge config/tiger_sentence.custom.yaml; then deploy Rime.")

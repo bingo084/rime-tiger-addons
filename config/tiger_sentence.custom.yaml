@@ -6,7 +6,6 @@ patch:
   - lua_processor@tiger_sentence_ascii
   - lua_processor@*tiger_emoji_processor
   - recognizer
-  - lua_processor@*tiger_kf_processor
   - lua_processor@*tiger_punct_alt
   - lua_processor@tiger_sentence_processor
   - key_binder

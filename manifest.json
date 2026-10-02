@@ -38,14 +38,6 @@
       "sha256": "82e22d7ac2e41e9c502049329ab9c3f7c823db8e39aeb04802c9063f13505d3e"
     },
     {
-      "path": "lua/tiger_kf_processor.lua",
-      "sha256": "af77ddc1986b2f55887e842f5fa0796eb8e947f7066573b3b50959ad687ae56b"
-    },
-    {
-      "path": "lua/tiger_kf.lua",
-      "sha256": "1c0f3140ce59eaa033562b67bd74e1087a14549dbb88f2b29d956235793f7ab6"
-    },
-    {
       "path": "pinyin_simp.custom.yaml",
       "sha256": "d9786787f797fa8f1da7b9ffed55268edcd9cef579cc66b9137622bc698fc1e9"
     },
@@ -77,5 +69,9 @@
       "path": "lua/tiger_emoji_processor.lua",
       "sha256": "72af1240b3b47a1fd7ef3793f068c13427e598a99468372c68fec07740c12778"
     }
+  ],
+  "retired": [
+    "lua/tiger_kf_processor.lua",
+    "lua/tiger_kf.lua"
   ]
 }

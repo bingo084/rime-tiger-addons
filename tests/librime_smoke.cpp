@@ -17,7 +17,11 @@ int main(int argc,char**argv){try{check(argc==2,"userdir needed");check(dlopen("
  std::string c;check(type("`nihc").empty(),"lookup auto committed");check(top(&c)=="你好"&&c.find("jx bh")!=std::string::npos&&c.find("女子")!=std::string::npos,"automatic reverse split/comment wrong");check(key(' ')=="你好","lookup commit wrong");
  clear();type("`nihc");check(page()==0,"reverse initial page");check(key('n',4).empty(),"reverse Ctrl+n committed");check(page()==1,"reverse Ctrl+n paging");check(key('p',4).empty(),"reverse Ctrl+p committed");check(page()==0,"reverse Ctrl+p paging");
  clear();type("jxbh");key(0xff09);key(0xff09,1);check(top()=="你好","Tab backwards changed first text");check(key(' ')=="你好","Shift+Tab backwards commit failed");
- for(auto p:{std::pair<std::string,std::string>{";a","！"},{";w","？"},{";;","；"},{"; ","："},{";z","“"}}){clear();check(type(p.first)==p.second,"quick symbol "+p.first);}
+ clear();check(type(";")=="；","single semicolon should commit immediately");check(std::string(a->get_input(s)).empty(),"semicolon left pending input");
+ clear();check(type("\\")=="、","single backslash should commit dunhao");
+ clear();check(type("jxbh ;")=="你好；","sentence plus semicolon failed");
+ clear();check(type("jxbh\\")=="你好、","sentence plus dunhao failed");
+ clear();check(type("jxbh;").empty()&&std::string(a->get_input(s))=="jxbh;","native semicolon rank suffix changed");
  clear();type("/sx");check(page()==0,"symbols initial page");key('n',4);check(page()==1,"Ctrl+n paging");key('p',4);check(page()==0,"Ctrl+p paging");
  option("tiger_sentence_correction_off",true);option("tiger_sentence_early_commit",false);type("lomn");key(0xff09);check(type("ueottu").empty(),"Tab unexpectedly committed");check(top()=="草码的是我","Tab lock lost");check(key(' ')=="草码的是我","Tab commit lost");
  option("tiger_sentence_correction_weak",true);option("tiger_sentence_early_commit",true);check(type("ptue").empty(),"correction empty-code commit regression");check(top(&c)=="是的"&&c=="🐞","correction candidate wrong");check(key(' ')=="是的","correction commit wrong");
