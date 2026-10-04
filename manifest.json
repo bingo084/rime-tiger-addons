@@ -60,6 +60,10 @@
     {
       "path": "lua/tiger_emoji_processor.lua",
       "sha256": "72af1240b3b47a1fd7ef3793f068c13427e598a99468372c68fec07740c12778"
+    },
+    {
+      "path": "lua/tiger_user_codes.lua",
+      "sha256": "e7c165862d88650b16570c3f0d77997bfa55468cf3d0699b9bd690cf67fec918"
     }
   ],
   "retired": [

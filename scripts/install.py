@@ -9,6 +9,8 @@ from pathlib import Path
 import shutil
 import tempfile
 
+from user_codes_patch import apply as patch_user_codes
+
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -44,6 +46,17 @@ def atomic_copy(source, target):
         temporary.unlink(missing_ok=True)
 
 
+def atomic_write(content, target):
+    with tempfile.NamedTemporaryFile(dir=target.parent, delete=False) as stream:
+        temporary = Path(stream.name)
+        stream.write(content)
+    try:
+        shutil.copymode(target, temporary)
+        os.replace(temporary, target)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--rime-dir", required=True, type=Path)
@@ -56,6 +69,11 @@ def main():
         if not (target / name).is_file():
             parser.error(f"Install the official Tiger Sentence base first: missing {name}")
     entries = resources()
+    core_path = target / "lua/tiger_sentence.lua"
+    core_content = core_path.read_bytes()
+    patched_core = patch_user_codes(core_content.decode("utf-8")).encode("utf-8")
+    core_changed = patched_core != core_content
+    print(f"{'PATCH' if core_changed else 'OK'} lua/tiger_sentence.lua (personal words)")
     retired = json.loads((ROOT / "manifest.json").read_text()).get("retired", [])
     active = {entry["path"] for entry in entries}
     removals = []
@@ -77,11 +95,15 @@ def main():
             changed.append(entry)
         print(f"{'OK' if matches else 'COPY'} {entry['path']}")
     if args.check:
-        return 1 if changed or removals else 0
-    if args.dry_run or not (changed or removals):
-        print(f"{len(changed)} resource(s) need installation; {len(removals)} retired resource(s) need removal; no files written.")
+        return 1 if changed or removals or core_changed else 0
+    if args.dry_run or not (changed or removals or core_changed):
+        print(f"{len(changed)} resource(s) need installation; {int(core_changed)} core patch(es); {len(removals)} retired resource(s) need removal; no files written.")
         return 0
     backup = target / "backups" / ("tiger-addons-" + datetime.now().strftime("%Y%m%d-%H%M%S-%f"))
+    if core_changed:
+        saved = backup / "lua/tiger_sentence.lua"
+        saved.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(core_path, saved)
     for entry in changed:
         destination = target / entry["path"]
         if destination.is_file():
@@ -94,6 +116,8 @@ def main():
         shutil.copy2(target / name, saved, follow_symlinks=False)
     for entry in changed:
         atomic_copy(ROOT / "assets" / entry["path"], target / entry["path"])
+    if core_changed:
+        atomic_write(patched_core, core_path)
     for name in removals:
         (target / name).unlink()
     print(f"Installed {len(changed)} resource(s). Personal custom and user data were preserved.")
@@ -101,9 +125,14 @@ def main():
         print(f"Removed {len(removals)} retired resource(s), with rollback copies.")
     if backup.exists():
         print(f"Backup: {backup}")
+    if core_changed:
+        print("Applied the personal-word loader patch; official code tables were preserved.")
     print("Restore custom through chezmoi, or merge config/tiger_sentence.custom.yaml; then deploy Rime.")
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    try:
+        raise SystemExit(main())
+    except ValueError as error:
+        raise SystemExit(str(error))

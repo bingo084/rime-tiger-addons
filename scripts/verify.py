@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Build and test a fresh Rime profile without using the live databases."""
 import argparse
+import hashlib
 import json
 from pathlib import Path
 import shutil
@@ -11,6 +12,7 @@ import tempfile
 import yaml
 
 from install import ROOT, digest
+from user_codes_patch import restore as restore_core
 
 
 def run_logged(command, log):
@@ -21,6 +23,29 @@ def run_logged(command, log):
         raise RuntimeError(f"Command failed ({result.returncode}); log: {log}")
 
 
+def verify_user_codes(work, user):
+    binary = work / "user_codes_smoke"
+    run_logged(["g++", "-std=c++17", str(ROOT / "tests/user_codes_smoke.cpp"),
+                "-o", str(binary), "-lrime", "-ldl"], work / "compile-user-codes.log")
+    for mode in ("before", "after"):
+        profile = work / ("words-" + mode)
+        shutil.copytree(user, profile, symlinks=True,
+                        ignore=shutil.ignore_patterns("*.userdb", "backups", "*.log", "user.yaml"))
+        suffix = "\tafter" if mode == "after" else ""
+        (profile / "custom_phrase.txt").write_text(
+            "# Personal phrase fixture\n" +
+            "".join(f"{word}\t{code}{suffix}\n" for word, code in
+                    (("要不要", "vcv"), ("不要", "cv"), ("要不", "vc"))))
+        table_before = digest(profile / "tiger_sentence.codes.txt")
+        run_logged([str(binary), str(profile), mode], work / ("words-" + mode + ".log"))
+        if digest(profile / "tiger_sentence.codes.txt") != table_before:
+            raise RuntimeError("Personal words rewrote the official code table")
+        print((work / ("words-" + mode + ".log")).read_text().splitlines()[-1])
+    run_logged(["lua", str(ROOT / "tests/user_codes.lua"), str(user), str(work / "words-before")],
+               work / "character-indexes.log")
+    print((work / "character-indexes.log").read_text().strip())
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base-rime-dir", required=True, type=Path)
@@ -29,8 +54,14 @@ def main():
     args = parser.parse_args()
     base = args.base_rime_dir.expanduser().resolve()
     expected = json.loads((ROOT / "BASELINE.json").read_text())["official_runtime_sha256"]
-    drift = [name for name, sha in expected.items()
-             if not (base / name).is_file() or digest(base / name) != sha]
+    def base_digest(name):
+        path = base / name
+        if not path.is_file():
+            return None
+        if name == "lua/tiger_sentence.lua":
+            return hashlib.sha256(restore_core(path.read_bytes().decode("utf-8")).encode("utf-8")).hexdigest()
+        return digest(path)
+    drift = [name for name, sha in expected.items() if base_digest(name) != sha]
     if drift and not args.allow_new_base:
         parser.error("Base differs from the recorded version: " + ", ".join(drift))
     if drift:
@@ -76,6 +107,7 @@ def main():
     run_logged(["g++", "-std=c++17", str(ROOT / "tests/librime_smoke.cpp"), "-o", str(binary), "-lrime", "-ldl", "-Wl,-rpath,/usr/lib/rime-plugins"], work / "compile.log")
     run_logged([str(binary), str(user)], work / "smoke.log")
     print((work / "smoke.log").read_text().splitlines()[-1])
+    verify_user_codes(work, user)
     print("Fresh install, generated bindings, and isolated librime behavior verified.")
     print(f"Logs retained in {work}; live databases were not copied or modified.")
 
