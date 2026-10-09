@@ -1,7 +1,11 @@
 {
-  "date": "2026-10-02",
-  "base": "Tiger Sentence D89-r3, local 20261001 build, TCSKNM03",
+  "date": "2026-10-09",
+  "base": "Tiger Sentence 1.6.20261009, source 4eaf42e661129ab965fef200dc4a08eff7b4e3fe, TCSKNM03",
   "packages": [
+    {
+      "file": "虎整句Rime-20261009-4eaf42e-完整包.zip",
+      "sha256": "7ef281a60c34355b254930c6398550c130fa8d2fc9bcbcf398da835393522dd1"
+    },
     {
       "file": "虎整句-Rime-20261001-D89-r3-四档纠错瓢虫版.7z",
       "sha256": "96afcda870fad7a179f09db41026327b142b7023fb87c02f37346588e283bb04"
@@ -16,13 +20,13 @@
     }
   ],
   "official_runtime_sha256": {
-    "lua/tiger_sentence.lua": "b4787aa9ab9a2dbf2446e00738f56bee232f2cf6f7a36bb3f94f734129573670",
+    "lua/tiger_sentence.lua": "6fa8769dc844024e203d90de90ea8697a01dcf41fe26b115a58d7d7db5566f18",
     "lua/tiger_sentence_cache.lua": "8ebd209588fb62d0bf888e752b95d8588ecbcdef2af40f8b009865fc3c41da7c",
     "lua/tiger_sentence_lexical.lua": "d49f45f0ee0033fd2466269d967b4784f508da220ec62215806e227ea590fe8d",
     "lua/tiger_sentence_fivegram.lua": "a32c818ad81078351feace6f0a53a9851c41394fce9ef0d734f2d8bfa03763c2",
     "lua/tiger_sentence_ngram.lua": "f740c5b53237cef704daab71f5fe3231035899e37071112aaf064741d5db9edc",
-    "lua/tiger_sentence_learning.lua": "e79425f9f0cc255290e29b2a3b5ebf234dedf211501dacbfcec7dc3c61cb9b11",
-    "lua/tiger_sentence_correction.lua": "fcb6c5326580ee9fa7d1b73fccbe3a73722a699090da0e53f25dd474efecde74",
+    "lua/tiger_sentence_learning.lua": "99e880faceb30837596524c65e229cf7a890795f7553a20d5d488b073363d098",
+    "lua/tiger_sentence_correction.lua": "add2c2191ec7f2fa44a4c6cdeee3c9cb8f1fb871db86ae3c384f478fffbe115d",
     "models/tiger_sentence.lexical.bin": "8dbc884b6cb719d07e4cef153c8048db19a11f8224f75a4ed87853e688a27393",
     "models/sentence-fivegram-mobile.bin": "756f6c92cf43ad6e8e3087ce66b711ac6ad0fc41e6f3fb82b3766e35ecab8681",
     "models/sentence-ngram-mobile.bin": "c0063898fdff27c1fb00c1c72fa28a6c1b375fade1ec2045d731b9db958bdecc",
@@ -31,10 +35,11 @@
     "tiger_sentence.full_code_whitelist.txt": "05d257457898146262f7dbf264103c70a8cf2ee92d188b770ad13232b293f566",
     "tiger_sentence.codes.txt": "1d3e9b0ce0e4a603be3f220c71acecad846f020e87a52723ecb3814f6b53ac0e",
     "rime.lua": "419df2e184b58ee557138b0026bd7bedc4b9c502013b5b44bac9a045e1dfb04f",
-    "tiger_sentence.schema.yaml": "f654b30fc6be9061e0e745b077d9d4b03b880f7a1fafd345b3b903bf79122f20"
+    "tiger_sentence.schema.yaml": "9ef9ee6e7510e99b4cb5e14f9661dfe781b1ef22a8df7aeb73c6b03e89b80bd9",
+    "lua/tiger_sentence_learning_text.lua": "423443dc8ce76f00fcb1bb2ee7da014f1674d16bcdeaf9341ae9f967df5dcb9c"
   },
   "verified_environment": {
-    "librime": "1.17.0-5",
+    "librime": "1:1.17.0-5",
     "lua": "5.5.1-1",
     "fcitx5": "5.1.23-1",
     "fcitx5-rime": "5.1.16-1"
